@@ -1,7 +1,7 @@
-import { api, isDemo, resetDemo } from './api.js?v=3';
-import { Graph } from './graph.js?v=3';
-import { h, toast, fullName } from './ui.js?v=3';
-import { STATUS, pill, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker } from './forms.js?v=3';
+import { api, isDemo, resetDemo, setDemo } from './api.js?v=4';
+import { Graph } from './graph.js?v=4';
+import { h, toast, fullName } from './ui.js?v=4';
+import { STATUS, pill, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker } from './forms.js?v=4';
 
 const COLORS = ['#a78bfa', '#4fb3d9', '#e5a24b', '#5bbf8a', '#e0607e', '#c3d35a'];
 const root = document.getElementById('root');
@@ -70,7 +70,9 @@ function renderLogin() {
     form,
     isDemo && h('div', { class: 'demo-note' }, h('strong', {}, 'Demo mode'), ' — sample data, password is ', h('code', {}, 'demo'),
       h('div', { class: 'chips' }, quick('dhanush', 'Dhanush (admin)'), quick('od1', 'OD Contractor 1')),
-      h('button', { class: 'link', onclick: () => { resetDemo(); location.reload(); } }, 'Reset demo data')))));
+      h('button', { class: 'link', onclick: () => { resetDemo(); location.reload(); } }, 'Reset demo data'),
+      h('button', { class: 'link', onclick: () => setDemo(false) }, 'Exit demo')),
+    !isDemo && h('button', { class: 'btn ghost big demo-btn', type: 'button', onclick: () => setDemo(true) }, 'Try demo (sample data)'))));
 }
 
 /* --------------------------------- shell --------------------------------- */
@@ -83,7 +85,7 @@ function renderTop() {
   const tabs = isAdmin() ? [['network', 'Network'], ['list', 'All workers']] : [['team', 'My team'], ['network', 'Network']];
   const c = cityOf(ctx.user.city_code);
   document.getElementById('top').replaceChildren(
-    h('div', { class: 'brand' }, h('span', { class: 'logo sm' }, '◉'), h('strong', {}, 'DND Network')),
+    h('div', { class: 'brand' }, h('span', { class: 'logo sm' }, '◉'), h('strong', {}, 'DND Network'), isDemo && h('span', { class: 'demo-tag' }, 'DEMO')),
     h('nav', { class: 'tabs' }, tabs.map(([k, label]) => h('button', {
       class: `tab ${S.tab === k ? 'on' : ''}`, onclick: () => { S.tab = k; S.sel = null; render(); } }, label))),
     h('div', { class: 'who' },

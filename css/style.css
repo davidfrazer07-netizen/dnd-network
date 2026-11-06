@@ -42,6 +42,9 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-d); 
 .logo { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 14px; background: var(--accent-d); color: #fff; font-size: 26px; box-shadow: 0 0 30px rgba(127,109,242,.5); }
 .logo.sm { width: 28px; height: 28px; font-size: 15px; border-radius: 8px; box-shadow: none; }
 .demo-note { margin-top: 20px; padding: 12px; border: 1px dashed var(--line); border-radius: 10px; font-size: 13px; color: var(--muted); }
+.demo-btn { margin-top: 12px; }
+.demo-tag { font-size: 10px; font-weight: 700; letter-spacing: .08em; padding: 2px 7px; border-radius: 99px; background: rgba(229,162,75,.18); color: #e5a24b; }
+.link + .link { margin-left: 12px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .chip { background: var(--panel2); border: 1px solid var(--line); border-radius: 99px; padding: 5px 11px; font-size: 12px; }
 

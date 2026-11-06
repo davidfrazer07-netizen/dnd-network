@@ -1,9 +1,11 @@
-import { CONFIG } from './config.js?v=3';
+import { CONFIG } from './config.js?v=4';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
 
-export const isDemo = !CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.startsWith('YOUR_');
+const wantsDemo = () => { try { return sessionStorage.getItem('dnd_demo') === '1'; } catch { return false; } };
+export const isDemo = !CONFIG.SUPABASE_URL || CONFIG.SUPABASE_URL.startsWith('YOUR_') || wantsDemo();
+export const setDemo = (on) => { try { on ? sessionStorage.setItem('dnd_demo', '1') : sessionStorage.removeItem('dnd_demo'); } catch { /* ignore */ } location.reload(); };
 
 let sb;
 const fail = (error) => { if (error) throw new Error(error.message || String(error)); };
