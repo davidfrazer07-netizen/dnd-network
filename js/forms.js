@@ -1,5 +1,5 @@
-import { api } from './api.js';
-import { h, select, toast, openModal, confirmBox, ageOf, fullName, fmtDate } from './ui.js';
+import { api } from './api.js?v=3';
+import { h, select, toast, openModal, confirmBox, ageOf, fullName, fmtDate } from './ui.js?v=3';
 
 export const STATUS = {
   Working: { color: '#5bbf8a', icon: '🔨', hint: 'On a job' },

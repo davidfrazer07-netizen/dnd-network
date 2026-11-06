@@ -1,7 +1,7 @@
-import { api, isDemo, resetDemo } from './api.js';
-import { Graph } from './graph.js';
-import { h, toast, fullName } from './ui.js';
-import { STATUS, pill, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker } from './forms.js';
+import { api, isDemo, resetDemo } from './api.js?v=3';
+import { Graph } from './graph.js?v=3';
+import { h, toast, fullName } from './ui.js?v=3';
+import { STATUS, pill, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker } from './forms.js?v=3';
 
 const COLORS = ['#a78bfa', '#4fb3d9', '#e5a24b', '#5bbf8a', '#e0607e', '#c3d35a'];
 const root = document.getElementById('root');
