@@ -15,6 +15,37 @@ export function h(tag, attrs = {}, ...kids) {
   return e;
 }
 
+const NS = 'http://www.w3.org/2000/svg';
+const ICONS = {
+  plus: ['M5 12h14', 'M12 5v14'],
+  minus: ['M5 12h14'],
+  x: ['M18 6 6 18', 'M6 6l12 12'],
+  fit: ['M8 3H5a2 2 0 0 0-2 2v3', 'M21 8V5a2 2 0 0 0-2-2h-3', 'M3 16v3a2 2 0 0 0 2 2h3', 'M16 21h3a2 2 0 0 0 2-2v-3'],
+  pin: ['M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z'],
+  users: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z', 'M22 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
+};
+const svg = (size, attrs, kids) => {
+  const e = document.createElementNS(NS, 'svg');
+  e.setAttribute('viewBox', '0 0 24 24'); e.setAttribute('width', size); e.setAttribute('height', size);
+  e.setAttribute('aria-hidden', 'true'); e.classList.add('ico');
+  for (const [k, v] of Object.entries(attrs)) e.setAttribute(k, v);
+  for (const [tag, a] of kids) {
+    const c = document.createElementNS(NS, tag);
+    for (const [k, v] of Object.entries(a)) c.setAttribute(k, v);
+    e.append(c);
+  }
+  return e;
+};
+// one line-icon set: 1.5 stroke, current text colour
+export const icon = (name, size = 16) => svg(size,
+  { fill: 'none', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+  ICONS[name].map((d) => ['path', { d }]));
+// flat product mark: a hub with three nodes
+export const mark = (size = 20) => svg(size, { fill: 'currentColor', stroke: 'currentColor', 'stroke-width': 1.5, 'stroke-linecap': 'round' }, [
+  ['path', { d: 'M12 12 5.5 6.5M12 12l7-4.5M12 12v8', fill: 'none' }],
+  ['circle', { cx: 12, cy: 12, r: 3, stroke: 'none' }], ['circle', { cx: 5.5, cy: 6.5, r: 2, stroke: 'none' }],
+  ['circle', { cx: 19, cy: 7.5, r: 2, stroke: 'none' }], ['circle', { cx: 12, cy: 20, r: 2, stroke: 'none' }]]);
+
 export function select(name, options, value) {
   const s = h('select', { name }, options.map(([v, label]) => h('option', { value: v }, label)));
   if (value != null) s.value = value;
@@ -32,7 +63,7 @@ export function openModal(title, body, { wide = false } = {}) {
   const esc = (e) => { if (e.key === 'Escape') close(); };
   const overlay = h('div', { class: 'overlay', onmousedown: (e) => { if (e.target === overlay) close(); } },
     h('div', { class: `modal ${wide ? 'wide' : ''}`, role: 'dialog', 'aria-label': title },
-      h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', onclick: close, 'aria-label': 'Close' }, '✕')),
+      h('div', { class: 'modal-head' }, h('h2', {}, title), h('button', { class: 'icon-btn', onclick: close, 'aria-label': 'Close' }, icon('x'))),
       h('div', { class: 'modal-body' }, body)));
   document.addEventListener('keydown', esc);
   document.body.append(overlay);

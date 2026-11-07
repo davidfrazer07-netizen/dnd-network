@@ -1,17 +1,17 @@
-import { api } from './api.js?v=4';
-import { h, select, toast, openModal, confirmBox, ageOf, fullName, fmtDate } from './ui.js?v=4';
+import { api } from './api.js?v=5';
+import { h, select, toast, openModal, confirmBox, ageOf, fullName, fmtDate } from './ui.js?v=5';
 
 export const STATUS = {
-  Working: { color: '#5bbf8a', icon: '🔨', hint: 'On a job' },
-  Available: { color: '#e5a24b', icon: '🕐', hint: 'Free to assign' },
-  'On leave': { color: '#8b8b8b', icon: '🏠', hint: 'Not working' },
+  Working: { color: '#5bbf8a', hint: 'On a job' },
+  Available: { color: '#e5b84b', hint: 'Free to assign' },
+  'On leave': { color: '#8a8a8a', hint: 'Not working' },
 };
 const SKILLS = ['Mason', 'Carpenter', 'Electrician', 'Plumber', 'Painter', 'Welder', 'Tile Layer',
   'Steel Fixer', 'Crane Operator', 'Shuttering', 'Supervisor', 'Helper'];
 const TASKS = ['Foundation work', 'Brick laying', 'Plastering', 'Roof shuttering', 'Painting', 'Wiring',
   'Pipe fitting', 'Tile work', 'Steel binding', 'Site clearing', 'Waiting for next site'];
 
-export const pill = (status) => h('span', { class: 'pill', style: `--c:${STATUS[status]?.color || '#888'}` }, status);
+export const pill = (status) => h('span', { class: 'status-tag', style: `--c:${STATUS[status]?.color || '#888'}` }, h('i'), status);
 
 const field = (label, input, cls = '') => h('label', { class: `field ${cls}` }, h('span', {}, label), input);
 const input = (name, attrs = {}) => h('input', { name, ...attrs });
@@ -46,7 +46,7 @@ export function openWorkerForm(ctx, worker) {
     conSelect.addEventListener('change', sync); sync();
   }
   const err = h('p', { class: 'form-error' });
-  const save = h('button', { class: 'btn primary big', type: 'submit' }, edit ? 'Save changes' : '＋ Add worker');
+  const save = h('button', { class: 'btn primary big', type: 'submit' }, edit ? 'Save changes' : 'Add worker');
   const form = h('form', { class: 'form-grid', novalidate: true },
     h('datalist', { id: 'skills' }, SKILLS.map((s) => h('option', { value: s }))),
     h('datalist', { id: 'tasks' }, TASKS.map((s) => h('option', { value: s }))),
@@ -81,7 +81,7 @@ export function openWorkerForm(ctx, worker) {
       }
       m.close(); await ctx.reload();
     } catch (ex) {
-      err.textContent = ex.message; save.disabled = false; save.textContent = edit ? 'Save changes' : '＋ Add worker';
+      err.textContent = ex.message; save.disabled = false; save.textContent = edit ? 'Save changes' : 'Add worker';
     }
   });
 }
@@ -95,7 +95,7 @@ export function openStatusForm(ctx, worker) {
     type: 'button', class: `status-btn ${s === status ? 'on' : ''}`, style: `--c:${v.color}`,
     onclick: () => { status = s; btns.forEach((b) => b.classList.toggle('on', b.dataset.s === s)); },
     'data-s': s,
-  }, h('span', { class: 'big-icon' }, v.icon), h('strong', {}, s), h('small', {}, v.hint)));
+  }, h('i', { class: 'sdot' }), h('strong', {}, s), h('small', {}, v.hint)));
   const err = h('p', { class: 'form-error' });
   const save = h('button', { class: 'btn primary big', onclick: async () => {
     save.disabled = true; save.textContent = 'Saving…';
@@ -120,7 +120,7 @@ export function workerDetail(ctx, w, close = () => {}) {
   const row = (k, v) => h('div', { class: 'kv' }, h('span', {}, k), h('strong', {}, v || '—'));
   return h('div', { class: 'detail' },
     h('div', { class: 'detail-top' },
-      h('div', { class: 'avatar', style: `--c:${STATUS[w.status]?.color}` }, (w.first_name[0] || '') + (w.last_name[0] || '')),
+      h('div', { class: 'avatar' },(w.first_name[0] || '') + (w.last_name[0] || '')),
       h('div', {}, h('h3', {}, fullName(w)), h('code', {}, w.worker_code), ' ', pill(w.status))),
     h('div', { class: 'kv-grid' },
       row('Skill', w.skill),

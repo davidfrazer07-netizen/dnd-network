@@ -1,9 +1,10 @@
-import { api, isDemo, resetDemo, setDemo } from './api.js?v=4';
-import { Graph } from './graph.js?v=4';
-import { h, toast, fullName } from './ui.js?v=4';
-import { STATUS, pill, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker } from './forms.js?v=4';
+import { api, isDemo, resetDemo, setDemo } from './api.js?v=5';
+import { Graph } from './graph.js?v=5';
+import { h, toast, fullName, icon, mark } from './ui.js?v=5';
+import { STATUS, pill, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker } from './forms.js?v=5';
 
-const COLORS = ['#a78bfa', '#4fb3d9', '#e5a24b', '#5bbf8a', '#e0607e', '#c3d35a'];
+const COLORS = ['#9d8cff', '#4fb3d9', '#e0607e', '#b4c94a', '#d08ad6', '#7d8fa9'];
+const ACCENT = '#f07a35';
 const root = document.getElementById('root');
 const ctx = { user: null, cities: [], admins: [], contractors: [], workers: [], reload };
 const S = { tab: 'network', city: null, status: null, q: '', mine: true, sel: null };
@@ -66,13 +67,13 @@ function renderLogin() {
 
   const quick = (u, label) => h('button', { type: 'button', class: 'chip', onclick: () => { user.value = u; pass.value = 'demo'; form.requestSubmit(); } }, label);
   root.replaceChildren(h('div', { class: 'login' }, h('div', { class: 'login-card' },
-    h('div', { class: 'logo' }, '◉'), h('h1', {}, 'DND Network'), h('p', { class: 'muted' }, 'Construction workforce, six cities, one view.'),
+    h('div', { class: 'logo' }, mark(28)), h('h1', {}, 'DND Network'), h('p', { class: 'muted' }, 'Workers, contractors and sites across six cities'),
     form,
     isDemo && h('div', { class: 'demo-note' }, h('strong', {}, 'Demo mode'), ' — sample data, password is ', h('code', {}, 'demo'),
       h('div', { class: 'chips' }, quick('dhanush', 'Dhanush (admin)'), quick('od1', 'OD Contractor 1')),
       h('button', { class: 'link', onclick: () => { resetDemo(); location.reload(); } }, 'Reset demo data'),
       h('button', { class: 'link', onclick: () => setDemo(false) }, 'Exit demo')),
-    !isDemo && h('button', { class: 'btn ghost big demo-btn', type: 'button', onclick: () => setDemo(true) }, 'Try demo (sample data)'))));
+    !isDemo && h('button', { class: 'btn ghost big demo-btn', type: 'button', onclick: () => setDemo(true) }, 'Try the demo'))));
 }
 
 /* --------------------------------- shell --------------------------------- */
@@ -85,7 +86,7 @@ function renderTop() {
   const tabs = isAdmin() ? [['network', 'Network'], ['list', 'All workers']] : [['team', 'My team'], ['network', 'Network']];
   const c = cityOf(ctx.user.city_code);
   document.getElementById('top').replaceChildren(
-    h('div', { class: 'brand' }, h('span', { class: 'logo sm' }, '◉'), h('strong', {}, 'DND Network'), isDemo && h('span', { class: 'demo-tag' }, 'DEMO')),
+    h('div', { class: 'brand' }, h('span', { class: 'logo sm' }, mark(18)), h('strong', {}, 'DND Network'), isDemo && h('span', { class: 'demo-tag' }, 'DEMO')),
     h('nav', { class: 'tabs' }, tabs.map(([k, label]) => h('button', {
       class: `tab ${S.tab === k ? 'on' : ''}`, onclick: () => { S.tab = k; S.sel = null; render(); } }, label))),
     h('div', { class: 'who' },
@@ -113,12 +114,13 @@ function wMatch(w) {
   return true;
 }
 
-const stat = (label, value, color) => h('div', { class: 'stat', style: `--c:${color}` }, h('strong', {}, value), h('span', {}, label));
+const stat = (label, value, color) => h('div', { class: 'stat' },
+  h('span', {}, color && h('i', { style: `background:${color}` }), label), h('strong', {}, value));
 const statsBar = (ws) => {
   const c = counts(ws);
-  return h('div', { class: 'stats' }, stat('Workers', ws.length, '#a78bfa'), stat('Working', c.Working, STATUS.Working.color),
+  return h('div', { class: 'stats' }, stat('Workers', ws.length), stat('Working', c.Working, STATUS.Working.color),
     stat('Available', c.Available, STATUS.Available.color), stat('On leave', c['On leave'], STATUS['On leave'].color),
-    stat('Working away', c.away, '#4fb3d9'));
+    stat('Away from home city', c.away));
 };
 
 /* --------------------------------- network --------------------------------- */
@@ -127,7 +129,7 @@ function ensureGraph() {
   const cv = h('canvas');
   const ctl = (t, fn, title) => h('button', { class: 'ctl', title, onclick: fn }, t);
   graphWrap = h('div', { class: 'graph-wrap' }, cv, h('div', { class: 'graph-ctl' },
-    ctl('＋', () => graph.zoomBy(1.3), 'Zoom in'), ctl('－', () => graph.zoomBy(0.77), 'Zoom out'), ctl('⤢', () => graph.fit(), 'Fit to screen')));
+    ctl(icon('plus'), () => graph.zoomBy(1.3), 'Zoom in'), ctl(icon('minus'), () => graph.zoomBy(0.77), 'Zoom out'), ctl(icon('fit'), () => graph.fit(), 'Fit to screen')));
   graph = new Graph(cv, { onSelect });
 }
 
@@ -137,7 +139,7 @@ function buildGraph() {
   if (admin) {
     nodes.push({ id: 'hub', kind: 'hub', label: 'DND Construction', r: 24, color: '#f2f2f2' });
     for (const a of ctx.admins) {
-      nodes.push({ id: `admin:${a.id}`, kind: 'admin', label: a.full_name, r: 13, color: '#f2c94c', parent: 'hub' });
+      nodes.push({ id: `admin:${a.id}`, kind: 'admin', label: a.full_name, r: 13, color: ACCENT, parent: 'hub' });
       links.push(['hub', `admin:${a.id}`, 80]);
     }
   }
@@ -185,7 +187,7 @@ function onSelect(n) {
 function renderNetwork() {
   ensureGraph();
   const admin = isAdmin();
-  const search = h('input', { class: 'search', placeholder: 'Search name, ID, skill…', value: S.q, oninput: (e) => { S.q = e.target.value; applyFilter(); } });
+  const search = h('input', { class: 'search', placeholder: 'Search', value: S.q, oninput: (e) => { S.q = e.target.value; applyFilter(); } });
   const legendDot = (c, t) => h('div', { class: 'leg' }, h('i', { style: `background:${c}` }), t);
   const cityBtn = (code, label, n, color) => h('button', { class: `chip-row ${S.city === code ? 'on' : ''}`, onclick: () => { S.city = S.city === code ? null : code; render(); } },
     h('i', { style: `background:${color}` }), h('span', {}, label), h('em', {}, n));
@@ -196,11 +198,11 @@ function renderNetwork() {
     admin && h('h4', {}, 'Cities'),
     admin && ctx.cities.map((c) => cityBtn(c.code, c.name, ctx.workers.filter((w) => w.city_code === c.code).length, cityColor(c.code))),
     h('h4', {}, 'Status'), Object.keys(STATUS).map(statusBtn),
-    h('h4', {}, 'How to read'),
-    legendDot('#f2c94c', 'Admins'), legendDot('#a78bfa', 'City & contractor (city colour)'),
-    legendDot('#5bbf8a', 'Worker (colour = status)'),
-    h('div', { class: 'leg' }, h('i', { class: 'ring' }), 'Ring = working in another city'),
-    h('p', { class: 'tip' }, 'Drag dots, scroll to zoom, click for details.'));
+    h('h4', {}, 'Legend'),
+    legendDot(ACCENT, 'Admin'), legendDot('#9d8cff', 'City and contractor'),
+    legendDot('#5bbf8a', 'Worker, coloured by status'),
+    h('div', { class: 'leg' }, h('i', { class: 'ring' }), 'Working in another city'),
+    h('p', { class: 'tip' }, 'Drag to move, scroll to zoom'));
 
   drawerEl = admin ? h('aside', { class: 'drawer' }) : null;
   return h('div', { class: 'net-page' },
@@ -216,7 +218,7 @@ function renderDrawer() {
   const close = () => { S.sel = null; graph.select(null); renderDrawer(); };
   const head = (title, sub, color) => h('div', { class: 'drawer-head' },
     h('i', { class: 'dot', style: `background:${color}` }), h('div', {}, h('h3', {}, title), h('small', {}, sub)),
-    h('button', { class: 'icon-btn', onclick: close, 'aria-label': 'Close' }, '✕'));
+    h('button', { class: 'icon-btn', onclick: close, 'aria-label': 'Close' }, icon('x')));
   const workerList = (ws) => h('div', { class: 'wlist' }, ws.length ? ws.map((w) => h('button', {
     class: 'wrow', onclick: () => { S.sel = `w:${w.id}`; graph.select(S.sel); renderDrawer(); } },
     h('i', { style: `background:${STATUS[w.status].color}` }), h('span', {}, fullName(w)), h('small', {}, w.worker_code))) : h('p', { class: 'muted' }, 'No workers yet.'));
@@ -225,8 +227,8 @@ function renderDrawer() {
 
   let body;
   if (!S.sel) {
-    body = h('div', { class: 'empty' }, h('div', { class: 'empty-icon' }, '◉'),
-      h('p', {}, 'Click any dot on the graph to see who it is and update them.'));
+    body = h('div', { class: 'empty' }, h('div', { class: 'empty-icon' }, mark(32)),
+      h('p', {}, 'Select a worker, contractor or city'));
   } else if (kind === 'w') {
     const w = ctx.workers.find((x) => x.id === ref);
     body = w ? [head('Worker', cityOf(w.city_code)?.name || '', STATUS[w.status].color), workerDetail(ctx, w, close)] : null;
@@ -234,7 +236,7 @@ function renderDrawer() {
     const k = ctx.contractors.find((x) => x.id === ref);
     const ws = ctx.workers.filter((w) => w.contractor_id === ref);
     body = [head(k.full_name, `${cityOf(k.city_code)?.name} · ${ws.length}/10 workers · @${k.username}`, cityColor(k.city_code)), miniStats(ws),
-      h('button', { class: 'btn primary', onclick: () => openWorkerForm({ ...ctx, user: { ...ctx.user, role: 'admin' }, contractors: [k] }) }, '＋ Add worker'),
+      h('button', { class: 'btn primary', onclick: () => openWorkerForm({ ...ctx, user: { ...ctx.user, role: 'admin' }, contractors: [k] }) }, icon('plus'), 'Add worker'),
       workerList(ws)];
   } else if (kind === 'city') {
     const c = cityOf(ref);
@@ -245,7 +247,7 @@ function renderDrawer() {
       h('i', { style: `background:${cityColor(ref)}` }), h('span', {}, k.full_name), h('small', {}, `${ws.filter((w) => w.contractor_id === k.id).length}/10`))),
       h('h4', {}, 'Away from here'),
       (() => { const away = ctx.workers.filter((w) => w.current_city === ref && w.city_code !== ref);
-        return away.length ? workerList(away) : h('p', { class: 'muted' }, 'No outside workers here right now.'); })()];
+        return away.length ? workerList(away) : h('p', { class: 'muted' }, 'No outside workers here'); })()];
   } else {
     const all = ctx.workers;
     body = [head('DND Construction', `${ctx.admins.map((a) => a.full_name).join(' & ')}`, '#f2f2f2'), miniStats(all),
@@ -274,9 +276,9 @@ function renderList() {
   fill();
   return h('div', { class: 'list-page' }, statsBar(ctx.workers),
     h('div', { class: 'toolbar' },
-      h('input', { class: 'search', placeholder: 'Search name, ID, skill, task…', value: S.q, oninput: (e) => { S.q = e.target.value; fill(); } }),
+      h('input', { class: 'search', placeholder: 'Search', value: S.q, oninput: (e) => { S.q = e.target.value; fill(); } }),
       citySel, statSel, count,
-      h('button', { class: 'btn primary', onclick: () => openWorkerForm(ctx) }, '＋ Add worker')),
+      h('button', { class: 'btn primary', onclick: () => openWorkerForm(ctx) }, icon('plus'), 'Add worker')),
     h('div', { class: 'table-wrap' }, h('table', {},
       h('thead', {}, h('tr', {}, ['ID', 'Name', 'Skill', 'Home', 'Now in', 'Task', 'Status', 'Contractor'].map((t) => h('th', {}, t)))), tbody)));
 }
@@ -290,8 +292,8 @@ function renderTeam() {
   const fill = () => {
     const q = S.q.toLowerCase();
     const ws = (S.mine ? mine : ctx.workers).filter((w) => !q || `${fullName(w)} ${w.worker_code} ${w.skill}`.toLowerCase().includes(q));
-    grid.replaceChildren(...(ws.length ? ws.map(card) : [h('div', { class: 'empty-card' }, h('div', { class: 'empty-icon' }, '👷'),
-      h('p', {}, S.q ? 'No one found.' : 'No workers yet — tap “Add worker” to start.'))]));
+    grid.replaceChildren(...(ws.length ? ws.map(card) : [h('div', { class: 'empty-card' }, h('div', { class: 'empty-icon' }, icon('users', 32)),
+      h('p', {}, S.q ? 'No one found' : 'No workers yet. Tap Add worker to start'))]));
   };
   const card = (w) => {
     const now = cityOf(w.current_city);
@@ -299,7 +301,7 @@ function renderTeam() {
       h('div', { class: 'card-top' }, h('div', { class: 'avatar' }, (w.first_name[0] || '') + (w.last_name[0] || '')),
         h('div', {}, h('h3', {}, fullName(w)), h('code', {}, w.worker_code)), pill(w.status)),
       h('p', { class: 'skill' }, w.skill),
-      h('p', { class: 'where' }, '📍 ', now ? now.name : '—', w.current_task ? ` · ${w.current_task}` : ''),
+      h('p', { class: 'where' }, icon('pin', 14), now ? now.name : '—', w.current_task ? ` · ${w.current_task}` : ''),
       h('div', { class: 'card-actions' },
         h('button', { class: 'btn primary', onclick: () => openStatusForm(ctx, w) }, 'Update status'),
         h('button', { class: 'btn ghost', onclick: () => openWorkerModal(ctx, w) }, 'Details'),
@@ -310,11 +312,11 @@ function renderTeam() {
   return h('div', { class: 'team-page' },
     h('section', { class: 'hero' },
       h('div', {}, h('small', {}, 'Your city'), h('h1', {}, city?.name || ctx.user.city_code), h('p', { class: 'muted' }, `${ctx.user.full_name} · ${mine.length} of 10 workers`)),
-      h('button', { class: 'btn primary huge', onclick: () => openWorkerForm(ctx) }, '＋ Add worker')),
-    h('div', { class: 'stats' }, stat('My workers', `${mine.length}/10`, '#a78bfa'), stat('Working', c.Working, STATUS.Working.color),
+      h('button', { class: 'btn primary huge', onclick: () => openWorkerForm(ctx) }, icon('plus'), 'Add worker')),
+    h('div', { class: 'stats' }, stat('My workers', `${mine.length}/10`), stat('Working', c.Working, STATUS.Working.color),
       stat('Available', c.Available, STATUS.Available.color), stat('On leave', c['On leave'], STATUS['On leave'].color)),
     h('div', { class: 'toolbar' }, h('div', { class: 'segs' }, seg('My workers', true), seg(`All in ${city?.name || 'city'}`, false)),
-      h('input', { class: 'search', placeholder: 'Search…', value: S.q, oninput: (e) => { S.q = e.target.value; fill(); } })),
+      h('input', { class: 'search', placeholder: 'Search workers', value: S.q, oninput: (e) => { S.q = e.target.value; fill(); } })),
     grid);
 }
 

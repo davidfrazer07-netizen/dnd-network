@@ -3,7 +3,7 @@
 
 const LABEL = '#b3b3b3';
 const LINK = 'rgba(255,255,255,0.13)';
-const ACCENT = '#a78bfa';
+const ACCENT = '#f07a35';
 
 export class Graph {
   constructor(canvas, { onSelect } = {}) {
@@ -149,10 +149,12 @@ export class Graph {
     for (const n of this.nodes) {
       const dim = dimmed(n);
       ctx.globalAlpha = dim ? 0.18 : 1;
-      if (n.id === fid || (n.id === this.selected)) { ctx.shadowColor = n.color; ctx.shadowBlur = 18 * this.dpr; }
       ctx.fillStyle = n.color;
       ctx.beginPath(); ctx.arc(n.x, n.y, n.r, 0, 6.2832); ctx.fill();
-      ctx.shadowBlur = 0;
+      if (n.id === fid && n.id !== this.selected) {
+        ctx.strokeStyle = 'rgba(255,255,255,0.5)'; ctx.lineWidth = 1 / k;
+        ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 4, 0, 6.2832); ctx.stroke();
+      }
       if (n.ring) {
         ctx.strokeStyle = n.ring; ctx.lineWidth = 2 / k;
         ctx.beginPath(); ctx.arc(n.x, n.y, n.r + 3, 0, 6.2832); ctx.stroke();
