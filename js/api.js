@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=12';
+import { CONFIG } from './config.js?v=13';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
