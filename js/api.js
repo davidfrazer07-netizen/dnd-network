@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=5';
+import { CONFIG } from './config.js?v=6';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -55,16 +55,54 @@ const live = {
     fail(error);
     return data;
   },
-  async removeWorker(id) {
+  async removeWorker(id, files = []) {
     const { error } = await sb.from('workers').delete().eq('id', id);
     fail(error);
+    await this.removeFiles(files);
+  },
+  async projects() {
+    const { data, error } = await sb.from('projects').select('*').order('city_code').order('name');
+    fail(error);
+    return data;
+  },
+  async addProject(city_code, name) {
+    const { data, error } = await sb.from('projects').insert({ city_code, name }).select().single();
+    fail(error);
+    return data;
+  },
+  async renameProject(id, name) {
+    const { error } = await sb.from('projects').update({ name }).eq('id', id);
+    fail(error);
+  },
+  async removeProject(id) {
+    const { error } = await sb.from('projects').delete().eq('id', id);
+    fail(error);
+  },
+  async uploadAadhaar(city, workerId, side, blob) {
+    const path = `${city}/${workerId}/${side}-${Date.now()}.jpg`;
+    const { error } = await sb.storage.from('aadhaar').upload(path, blob, { contentType: 'image/jpeg' });
+    fail(error);
+    return path;
+  },
+  async fileUrl(path) {
+    const { data, error } = await sb.storage.from('aadhaar').createSignedUrl(path, 600);
+    fail(error);
+    return data.signedUrl;
+  },
+  async removeFiles(paths) {
+    const list = paths.filter(Boolean);
+    if (list.length) await sb.storage.from('aadhaar').remove(list); // best effort
   },
 };
 
 /* ------------------------- Demo (no backend) -------------------------- */
-const KEY = 'dnd_demo_v1';
-const CITY_LIST = [['OD', 'Odisha'], ['TN', 'Tamil Nadu'], ['KA', 'Karnataka'],
-  ['KL', 'Kerala'], ['MH', 'Maharashtra'], ['TS', 'Telangana']];
+const KEY = 'dnd_demo_v2';
+const CITY_LIST = [['OD', 'Odisha'], ['TN', 'Tamil Nadu'], ['KA', 'Karnataka']];
+const PROJECT_NAMES = {
+  OD: ['Bhubaneswar Smart Road', 'Paradip Warehouse'],
+  TN: ['Chennai Metro Phase 2', 'Coimbatore IT Park'],
+  KA: ['Bengaluru Tech Tower', 'Mysuru Flyover'],
+};
 const FIRST = ['Ravi', 'Suresh', 'Anil', 'Mohan', 'Prakash', 'Ramesh', 'Vijay', 'Sanjay', 'Kiran', 'Deepak',
   'Arjun', 'Manoj', 'Biswajit', 'Murugan', 'Karthik', 'Santosh', 'Rajesh', 'Lakshmi', 'Sunita', 'Geeta',
   'Ganesh', 'Harish', 'Naveen', 'Subhash', 'Pradeep', 'Bhaskar'];
@@ -90,6 +128,8 @@ function seedDemo() {
   ];
   const workers = [];
   const counters = {};
+  const projects = cities.flatMap((c) => PROJECT_NAMES[c.code].map((name, i) => ({
+    id: `p-${c.code}-${i + 1}`, city_code: c.code, name, created_at: new Date().toISOString() })));
   for (const c of cities) {
     for (const slot of [1, 2]) {
       const con = { id: `c-${c.code}-${slot}`, username: `${c.code.toLowerCase()}${slot}`,
@@ -100,6 +140,7 @@ function seedDemo() {
         counters[c.code] = (counters[c.code] || 0) + 1;
         const away = r() < 0.15;
         const roll = r();
+        const where = away ? pick(cities.filter((x) => x.code !== c.code)).code : c.code;
         workers.push({
           id: crypto.randomUUID(),
           worker_code: `DND_${c.code}_${String(counters[c.code]).padStart(3, '0')}`,
@@ -109,9 +150,11 @@ function seedDemo() {
           sex: r() < 0.88 ? 'Male' : 'Female',
           address: `${1 + Math.floor(r() * 90)}, Main Road, ${c.name}`,
           phone: `9${String(Math.floor(r() * 1e9)).padStart(9, '0')}`,
-          other_number: r() < 0.5 ? `8${String(Math.floor(r() * 1e9)).padStart(9, '0')}` : '',
+          aadhaar_number: String(Math.floor(1e11 + r() * 9e11)),
+          aadhaar_front: '', aadhaar_back: '',
           skill: pick(SKILLS),
-          current_city: away ? pick(cities.filter((x) => x.code !== c.code)).code : c.code,
+          current_city: where,
+          project_id: roll < 0.2 ? null : pick(projects.filter((p) => p.city_code === where)).id,
           current_task: roll < 0.12 ? 'Waiting for next site' : pick(TASKS),
           status: roll < 0.12 ? 'Available' : roll < 0.2 ? 'On leave' : 'Working',
           created_at: new Date().toISOString(),
@@ -119,7 +162,7 @@ function seedDemo() {
       }
     }
   }
-  return { cities, people, workers, counters, session: null };
+  return { cities, people, workers, projects, counters, session: null };
 }
 
 let db;
@@ -127,6 +170,11 @@ const save = () => localStorage.setItem(KEY, JSON.stringify(db));
 const wait = (v) => new Promise((res) => setTimeout(() => res(structuredClone(v)), 120));
 const me = () => db.people.find((p) => p.id === db.session);
 const canSee = (w) => me().role === 'admin' || w.city_code === me().city_code;
+const adminOnly = () => { if (me().role !== 'admin') throw new Error('Only the admins can change projects'); };
+const checkProject = (id) => { // contractors may only pick a project from their own state
+  if (!id || me().role === 'admin') return;
+  if (db.projects.find((p) => p.id === id)?.city_code !== me().city_code) throw new Error('You can only pick projects from your own state');
+};
 
 const demo = {
   async init() {
@@ -144,8 +192,37 @@ const demo = {
   cities: async () => wait(db.cities),
   people: async () => wait(db.people.filter((p) => me().role === 'admin' || p.city_code === me().city_code || p.id === me().id)),
   workers: async () => wait(db.workers.filter(canSee)),
+  async projects() {
+    return wait(db.projects.filter((p) => me().role === 'admin' || p.city_code === me().city_code));
+  },
+  async addProject(city_code, name) {
+    adminOnly();
+    if (db.projects.some((p) => p.city_code === city_code && p.name.toLowerCase() === name.toLowerCase())) throw new Error('That project already exists in this state');
+    const row = { id: crypto.randomUUID(), city_code, name, created_at: new Date().toISOString() };
+    db.projects.push(row); save();
+    return wait(row);
+  },
+  async renameProject(id, name) {
+    adminOnly();
+    db.projects.find((p) => p.id === id).name = name; save();
+  },
+  async removeProject(id) {
+    adminOnly();
+    db.projects = db.projects.filter((p) => p.id !== id);
+    db.workers.forEach((w) => { if (w.project_id === id) w.project_id = null; });
+    save();
+  },
+  // demo keeps photos inline as data URLs, so the "path" is the image itself
+  uploadAadhaar: (city, workerId, side, blob) => new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result); r.onerror = () => rej(new Error('Could not read that photo'));
+    r.readAsDataURL(blob);
+  }),
+  fileUrl: async (path) => path,
+  removeFiles: async () => {},
   async addWorker(w) {
     if (!canSee(w)) throw new Error('Not allowed');
+    checkProject(w.project_id);
     db.counters[w.city_code] = (db.counters[w.city_code] || 0) + 1;
     const row = { ...w, id: crypto.randomUUID(), created_at: new Date().toISOString(),
       worker_code: `DND_${w.city_code}_${String(db.counters[w.city_code]).padStart(3, '0')}` };
@@ -156,6 +233,7 @@ const demo = {
     const w = db.workers.find((x) => x.id === id);
     if (!w || !canSee(w)) throw new Error('Not allowed');
     const { worker_code, city_code, ...safe } = patch;
+    if (safe.project_id !== undefined && safe.project_id !== w.project_id) checkProject(safe.project_id);
     Object.assign(w, safe); save();
     return wait(w);
   },

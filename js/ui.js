@@ -22,6 +22,7 @@ const ICONS = {
   x: ['M18 6 6 18', 'M6 6l12 12'],
   fit: ['M8 3H5a2 2 0 0 0-2 2v3', 'M21 8V5a2 2 0 0 0-2-2h-3', 'M3 16v3a2 2 0 0 0 2 2h3', 'M16 21h3a2 2 0 0 0 2-2v-3'],
   pin: ['M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z', 'M12 7a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z'],
+  back: ['m15 18-6-6 6-6'],
   users: ['M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2', 'M9 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z', 'M22 21v-2a4 4 0 0 0-3-3.87', 'M16 3.13a4 4 0 0 1 0 7.75'],
 };
 const svg = (size, attrs, kids) => {
@@ -90,5 +91,27 @@ export const ageOf = (dob) => {
   return a;
 };
 
-export const fullName = (w) => `${w.first_name} ${w.last_name}`.trim();
+// phone photos are huge: scale down and re-encode as JPEG before upload
+export function shrinkImage(file, max = 1600, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height));
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(img.width * k); cv.height = Math.round(img.height * k);
+      cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      cv.toBlob((b) => (b ? resolve(b) : reject(new Error('Could not read that photo'))), 'image/jpeg', quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('That file is not a photo')); };
+    img.src = url;
+  });
+}
+
+export const openImage = (title, src) => openModal(title, h('img', { class: 'lightbox', src, alt: title }), { wide: true });
+
+export const fmtAadhaar = (s) => (s ? String(s).replace(/(\d{4})(?=\d)/g, '$1 ') : '');
+
+export const fullName =(w) => `${w.first_name} ${w.last_name}`.trim();
 export const fmtDate = (s) => (s ? new Date(s).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—');
