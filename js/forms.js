@@ -1,5 +1,5 @@
-import { api, isDemo } from './api.js?v=6';
-import { h, select, toast, openModal, confirmBox, openImage, shrinkImage, ageOf, fullName, fmtDate, fmtAadhaar } from './ui.js?v=6';
+import { api, isDemo } from './api.js?v=7';
+import { h, select, toast, openModal, confirmBox, openImage, shrinkImage, ageOf, fullName, fmtDate, fmtAadhaar } from './ui.js?v=7';
 
 export const STATUS = {
   Working: { color: '#5bbf8a', hint: 'On a job' },
@@ -79,7 +79,7 @@ export function openWorkerForm(ctx, worker) {
     current_task: input('current_task', { list: 'tasks', value: w.current_task || '', placeholder: 'What are they doing now?' }),
     status: select('status', Object.keys(STATUS).map((s) => [s, s]), w.status || 'Working'),
   };
-  const docs = { front: docField('Aadhaar front', w.aadhaar_front), back: docField('Aadhaar back', w.aadhaar_back) };
+  const docs = { front: docField('Aadhaar front *', w.aadhaar_front), back: docField('Aadhaar back *', w.aadhaar_back) };
 
   if (conSelect) {
     const sync = () => {
@@ -94,9 +94,9 @@ export function openWorkerForm(ctx, worker) {
     h('datalist', { id: 'skills' }, SKILLS.map((s) => h('option', { value: s }))),
     h('datalist', { id: 'tasks' }, TASKS.map((s) => h('option', { value: s }))),
     conSelect && field('Contractor', conSelect, 'span2'),
-    field('First name', f.first_name), field('Last name', f.last_name),
-    field('Date of birth', f.dob), field('Sex', f.sex),
-    field('Phone number', f.phone), field('Aadhaar Card Number', f.aadhaar_number),
+    field('First name *', f.first_name), field('Last name *', f.last_name),
+    field('Date of birth *', f.dob), field('Sex *', f.sex),
+    field('Phone number', f.phone), field('Aadhaar Card Number *', f.aadhaar_number),
     field('Address', f.address, 'span2'),
     field('Skill / trade', f.skill, 'span2'),
     h('div', { class: 'span2 divider' }, 'Aadhaar card photos'),
@@ -114,9 +114,11 @@ export function openWorkerForm(ctx, worker) {
     const d = Object.fromEntries(Object.entries(f).map(([k, el]) => [k, el.value.trim()]));
     d.aadhaar_number = d.aadhaar_number.replace(/[\s-]/g, '');
     d.project_id = d.project_id || null;
-    if (!d.first_name || !d.last_name || !d.dob || !d.skill) return (err.textContent = 'Please fill name, date of birth and skill.');
+    if (!d.first_name || !d.last_name || !d.dob || !d.sex || !d.skill) return (err.textContent = 'Please fill first name, last name, date of birth, sex and skill.');
     if (!/^[+\d][\d\s-]{6,}$/.test(d.phone)) return (err.textContent = 'Please enter a valid phone number.');
-    if (d.aadhaar_number && !/^\d{12}$/.test(d.aadhaar_number)) return (err.textContent = 'Aadhaar number must be 12 digits.');
+    if (!/^\d{12}$/.test(d.aadhaar_number)) return (err.textContent = 'Aadhaar number is required and must be 12 digits.');
+    if (!docs.front.file() && !w.aadhaar_front) return (err.textContent = 'Please add the Aadhaar front photo.');
+    if (!docs.back.file() && !w.aadhaar_back) return (err.textContent = 'Please add the Aadhaar back photo.');
     err.textContent = ''; save.disabled = true; save.textContent = 'Saving…';
     const up = async (row, side) => {
       const file = docs[side].file();

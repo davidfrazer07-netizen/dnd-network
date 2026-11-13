@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=6';
+import { CONFIG } from './config.js?v=7';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -30,6 +30,14 @@ const live = {
     return this.profile(data.user.id);
   },
   async logout() { await sb.auth.signOut(); },
+  async changePassword(username, current, next) { // proves the old password first, then sets the new one
+    const email = `${username.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
+    const { error } = await sb.auth.signInWithPassword({ email, password: current });
+    if (error) throw new Error('Wrong username or current password');
+    const { error: e2 } = await sb.auth.updateUser({ password: next });
+    await sb.auth.signOut();
+    fail(e2);
+  },
   async cities() {
     const { data, error } = await sb.from('cities').select('*').order('sort');
     fail(error);
@@ -189,6 +197,7 @@ const demo = {
     return wait(p);
   },
   async logout() { db.session = null; save(); },
+  async changePassword() { throw new Error('The demo password is always "demo"'); },
   cities: async () => wait(db.cities),
   people: async () => wait(db.people.filter((p) => me().role === 'admin' || p.city_code === me().city_code || p.id === me().id)),
   workers: async () => wait(db.workers.filter(canSee)),

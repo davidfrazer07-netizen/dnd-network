@@ -1,9 +1,9 @@
-import { api, isDemo, resetDemo, setDemo } from './api.js?v=6';
-import { Graph } from './graph.js?v=6';
-import { h, toast, fullName, icon, mark } from './ui.js?v=6';
-import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=6';
-import { workerBrowser } from './workertable.js?v=6';
-import { projectsView } from './projects.js?v=6';
+import { api, isDemo, resetDemo, setDemo } from './api.js?v=7';
+import { Graph } from './graph.js?v=7';
+import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=7';
+import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=7';
+import { workerBrowser } from './workertable.js?v=7';
+import { projectsView } from './projects.js?v=7';
 
 const COLORS = ['#9d8cff', '#4fb3d9', '#e0607e', '#b4c94a', '#d08ad6', '#7d8fa9'];
 const ACCENT = '#f07a35';
@@ -69,10 +69,31 @@ function renderLogin() {
   } }, h('label', { class: 'field' }, h('span', {}, 'Username'), user),
   h('label', { class: 'field' }, h('span', {}, 'Password'), pass), err, btn);
 
+  const changePassword = () => {
+    const f = (id, ph, ac) => h('input', { type: id === 'cu' ? 'text' : 'password', placeholder: ph, autocomplete: ac, required: true, autocapitalize: 'none' });
+    const [un, cur, nw, again] = [f('cu', 'Username', 'username'), f('cp', 'Current password', 'current-password'),
+      f('np', 'New password (8+ characters)', 'new-password'), f('np2', 'New password again', 'new-password')];
+    const msg = h('p', { class: 'form-error' });
+    const go = h('button', { class: 'btn primary big', type: 'submit' }, 'Change password');
+    const m = openModal('Change password', h('form', { onsubmit: async (e) => {
+      e.preventDefault();
+      if (nw.value.length < 8) return (msg.textContent = 'New password must be at least 8 characters.');
+      if (nw.value !== again.value) return (msg.textContent = 'The two new passwords do not match.');
+      if (nw.value === cur.value) return (msg.textContent = 'Pick a password different from the current one.');
+      go.disabled = true; go.textContent = 'Saving…'; msg.textContent = '';
+      try { await api.changePassword(un.value, cur.value, nw.value); m.close(); toast('Password changed. Log in with the new one.'); user.value = un.value; pass.value = ''; }
+      catch (ex) { msg.textContent = ex.message; go.disabled = false; go.textContent = 'Change password'; }
+    } },
+    [['Username', un], ['Current password', cur], ['New password', nw], ['New password again', again]].map(([l, i]) => h('label', { class: 'field' }, h('span', {}, l), i)),
+    msg, go));
+    un.value = user.value; un.focus();
+  };
+
   const quick = (u, label) => h('button', { type: 'button', class: 'chip', onclick: () => { user.value = u; pass.value = 'demo'; form.requestSubmit(); } }, label);
   root.replaceChildren(h('div', { class: 'login' }, h('div', { class: 'login-card' },
     h('div', { class: 'logo' }, mark(28)), h('h1', {}, 'DND Network'), h('p', { class: 'muted' }, 'Workers, contractors and projects across our states'),
     form,
+    !isDemo && h('button', { class: 'link', type: 'button', onclick: changePassword }, 'Change password'),
     isDemo && h('div', { class: 'demo-note' }, h('strong', {}, 'Demo mode'), ' — sample data, password is ', h('code', {}, 'demo'),
       h('div', { class: 'chips' }, quick('dhanush', 'Dhanush (admin)'), quick('od1', 'OD Contractor 1')),
       h('button', { class: 'link', onclick: () => { resetDemo(); location.reload(); } }, 'Reset demo data'),
