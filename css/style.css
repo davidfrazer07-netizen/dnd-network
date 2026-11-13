@@ -190,6 +190,7 @@ tbody tr { cursor: pointer; transition: background-color .15s var(--ease); } tbo
 .con-card strong { font-weight: 500; } .con-card small { color: var(--muted); font-size: 12px; line-height: 16px; } .con-card span { color: var(--text-2); font-size: 13px; }
 
 /* projects page */
+.hint { font-size: 12px; margin: -8px 0 16px; }
 .proj-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; padding: 16px 24px 0; align-items: start; }
 .proj-card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
 .proj-head { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; } .proj-head h3 { font-size: 16px; line-height: 24px; flex: 1; } .proj-head small { color: var(--muted); font-size: 12px; }

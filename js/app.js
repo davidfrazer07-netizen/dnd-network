@@ -1,15 +1,15 @@
-import { api, isDemo, resetDemo, setDemo } from './api.js?v=8';
-import { Graph } from './graph.js?v=8';
-import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=8';
-import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=8';
-import { workerBrowser } from './workertable.js?v=8';
-import { projectsView } from './projects.js?v=8';
-import { contractorsView } from './contractors.js?v=8';
+import { api, isDemo, resetDemo, setDemo } from './api.js?v=9';
+import { Graph } from './graph.js?v=9';
+import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=9';
+import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=9';
+import { workerBrowser } from './workertable.js?v=9';
+import { projectsView } from './projects.js?v=9';
+import { contractorsView } from './contractors.js?v=9';
 
 const COLORS = ['#9d8cff', '#4fb3d9', '#e0607e', '#b4c94a', '#d08ad6', '#7d8fa9'];
 const ACCENT = '#f07a35';
 const root = document.getElementById('root');
-const ctx = { user: null, cities: [], admins: [], contractors: [], workers: [], projects: [], reload };
+const ctx = { user: null, cities: [], allCities: [], admins: [], contractors: [], workers: [], projects: [], reload };
 const S = { tab: 'network', status: null, q: '', mine: true, sel: null, state: null, lf: {}, sf: {} };
 let graph, graphWrap, drawerEl;
 
@@ -44,6 +44,7 @@ async function enter() {
 
 async function loadAll() {
   const [cities, people, workers, projects] = await Promise.all([api.cities(), api.people(), api.workers(), api.projects()]);
+  ctx.allCities = cities; // includes hidden states, so a hidden one can be brought back
   ctx.cities = cities.filter((c) => c.active !== false); // states not in use yet stay hidden
   const live = new Set(ctx.cities.map((c) => c.code));
   ctx.admins = people.filter((p) => p.role === 'admin');

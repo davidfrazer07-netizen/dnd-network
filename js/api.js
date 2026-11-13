@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=8';
+import { CONFIG } from './config.js?v=9';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -67,6 +67,20 @@ const live = {
     const { error } = await sb.from('workers').delete().eq('id', id);
     fail(error);
     await this.removeFiles(files);
+  },
+  async addState(code, name, sort) { // also brings a hidden state back
+    const { error } = await sb.from('cities').upsert({ code, name, sort, active: true });
+    fail(error);
+  },
+  async addContractor(d) { // runs in the manage-contractor Edge Function (needs the service key)
+    const { data, error } = await sb.functions.invoke('manage-contractor', { body: d });
+    if (error) {
+      let msg = error.message;
+      try { const j = await error.context.json(); msg = j.error || j.message || msg; } catch { /* keep default */ }
+      if (/not found/i.test(msg)) msg = 'The contractor service is not set up yet. Deploy the manage-contractor function in Supabase.';
+      throw new Error(msg);
+    }
+    if (data?.error) throw new Error(data.error);
   },
   async history(workerId) {
     const { data, error } = await sb.from('worker_history').select('*').eq('worker_id', workerId).order('started_at');
@@ -232,6 +246,20 @@ const demo = {
   cities: async () => wait(db.cities),
   people: async () => wait(db.people.filter((p) => me().role === 'admin' || p.city_code === me().city_code || p.id === me().id)),
   workers: async () => wait(db.workers.filter(canSee)),
+  async addState(code, name, sort) {
+    adminOnly();
+    const old = db.cities.find((c) => c.code === code);
+    if (old) Object.assign(old, { name, active: true });
+    else db.cities.push({ code, name, sort, active: true });
+    save();
+  },
+  async addContractor({ username, full_name, city_code }) {
+    adminOnly();
+    if (db.people.some((p) => p.username === username)) throw new Error('That username is taken');
+    const slot = Math.max(0, ...db.people.filter((p) => p.city_code === city_code && p.role === 'contractor').map((p) => p.slot || 0)) + 1;
+    db.people.push({ id: crypto.randomUUID(), username, full_name, role: 'contractor', city_code, slot });
+    save();
+  },
   async history(workerId) {
     return wait(db.history.filter((x) => x.worker_id === workerId).sort((a, b) => a.started_at.localeCompare(b.started_at)));
   },
