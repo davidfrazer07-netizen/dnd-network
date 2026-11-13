@@ -1,5 +1,5 @@
-import { h, icon, fullName } from './ui.js?v=10';
-import { STATUS, pill, deployed, openWorkerForm, openWorkerModal } from './forms.js?v=10';
+import { h, icon, fullName } from './ui.js?v=11';
+import { STATUS, pill, deployed, openWorkerForm, openWorkerModal } from './forms.js?v=11';
 
 // Filterable workers table. `F` is the filter state (q, status, con, where, proj) and survives re-renders.
 // `scope` pins the table to one home state (the state page); `rerender` redraws the page.

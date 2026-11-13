@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=10';
+import { CONFIG } from './config.js?v=11';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -74,6 +74,11 @@ const live = {
   async addState(code, name, sort) { // also brings a hidden state back
     const { error } = await sb.from('cities').upsert({ code, name, sort, active: true });
     fail(error);
+  },
+  async removeState(code) { // hides it (and its people); nothing is deleted
+    const { data, error } = await sb.from('cities').update({ active: false }).eq('code', code).select();
+    fail(error);
+    if (!data.length) throw new Error('Not allowed. Run supabase/migration_004.sql first.');
   },
   async addContractor(d) { // runs in the manage-contractor Edge Function (needs the service key)
     const { data, error } = await sb.functions.invoke('manage-contractor', { body: d });
@@ -255,6 +260,10 @@ const demo = {
     if (old) Object.assign(old, { name, active: true });
     else db.cities.push({ code, name, sort, active: true });
     save();
+  },
+  async removeState(code) {
+    adminOnly();
+    db.cities.find((c) => c.code === code).active = false; save();
   },
   async addContractor({ username, full_name, city_code }) {
     adminOnly();

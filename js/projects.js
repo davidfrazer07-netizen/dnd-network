@@ -1,5 +1,6 @@
-import { api } from './api.js?v=10';
-import { h, icon, toast, openModal, confirmBox } from './ui.js?v=10';
+import { api } from './api.js?v=11';
+import { h, icon, toast, openModal, confirmBox } from './ui.js?v=11';
+import { addStateModal, removeStateModal } from './states.js?v=11';
 
 // Admin-only page: the project list for each state. Contractors can only pick from these.
 export function projectsView(ctx, colorOf) {
@@ -36,7 +37,8 @@ export function projectsView(ctx, colorOf) {
     const name = h('input', { placeholder: 'New project name', maxlength: 80, 'aria-label': `New project in ${c.name}` });
     return h('section', { class: 'proj-card' },
       h('div', { class: 'proj-head' }, h('i', { class: 'dot', style: `background:${colorOf(c.code)}` }), h('h3', {}, c.name),
-        h('small', {}, `${list.length} project${list.length === 1 ? '' : 's'}`)),
+        h('small', {}, `${list.length} project${list.length === 1 ? '' : 's'}`),
+        h('button', { class: 'icon-btn', title: `Remove ${c.name}`, 'aria-label': `Remove ${c.name}`, onclick: () => removeStateModal(ctx, c) }, icon('x'))),
       list.length ? list.map(row) : h('p', { class: 'muted proj-none' }, 'No projects yet'),
       h('form', { class: 'proj-add', onsubmit: (e) => {
         e.preventDefault();
@@ -47,6 +49,7 @@ export function projectsView(ctx, colorOf) {
   return h('div', { class: 'team-page' },
     h('section', { class: 'hero' }, h('div', {},
       h('small', {}, 'Admins only'), h('h1', {}, 'Projects'),
-      h('p', { class: 'muted' }, 'Contractors can only pick from the projects listed for their own state.'))),
+      h('p', { class: 'muted' }, 'Contractors can only pick from the projects listed for their own state.')),
+      h('button', { class: 'btn ghost', onclick: () => addStateModal(ctx) }, icon('plus'), 'Add state')),
     h('div', { class: 'proj-grid' }, ctx.cities.map(card)));
 }

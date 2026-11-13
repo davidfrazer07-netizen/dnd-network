@@ -1,5 +1,5 @@
-import { api, isDemo } from './api.js?v=10';
-import { h, select, toast, openModal, confirmBox, openImage, shrinkImage, ageOf, fullName, fmtDate, fmtAadhaar, fmtSpan } from './ui.js?v=10';
+import { api, isDemo } from './api.js?v=11';
+import { h, select, toast, openModal, confirmBox, openImage, shrinkImage, ageOf, fullName, fmtDate, fmtAadhaar, fmtSpan } from './ui.js?v=11';
 
 export const STATUS = {
   Working: { color: '#5bbf8a', hint: 'On a job' },
