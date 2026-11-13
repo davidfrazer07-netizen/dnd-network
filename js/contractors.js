@@ -1,6 +1,6 @@
-import { api } from './api.js?v=11';
-import { h, icon, select, toast, openModal } from './ui.js?v=11';
-import { addStateModal, removeStateModal } from './states.js?v=11';
+import { api } from './api.js?v=12';
+import { h, icon, select, toast, openModal } from './ui.js?v=12';
+import { addStateModal, removeStateModal } from './states.js?v=12';
 
 // Admin-only page: add states, add contractors, rename contractors.
 export function contractorsView(ctx, colorOf) {
@@ -18,6 +18,23 @@ export function contractorsView(ctx, colorOf) {
     } }, field(`Name (login stays @${k.username})`, name),
     h('div', { class: 'actions' }, h('button', { class: 'btn primary big', type: 'submit' }, 'Save'))));
     name.select();
+  };
+
+  const removeContractor = (k) => {
+    const mine = ctx.workers.filter((w) => w.contractor_id === k.id);
+    const others = ctx.contractors.filter((x) => x.city_code === k.city_code && x.id !== k.id);
+    if (mine.length && !others.length) return toast('Add another contractor in this state first, so their workers have somewhere to go.', 'err');
+    const to = mine.length ? select('move_to', others.map((x) => [x.id, x.full_name])) : null;
+    const err = h('p', { class: 'form-error' });
+    const go = h('button', { class: 'btn danger', type: 'submit' }, 'Yes, remove');
+    const m = openModal(`Remove ${k.full_name}?`, h('form', { onsubmit: async (e) => {
+      e.preventDefault(); go.disabled = true; go.textContent = 'Removing…'; err.textContent = '';
+      try { await api.removeContractor(k.id, to?.value); m.close(); toast(`${k.full_name} removed`); await ctx.reload(); }
+      catch (ex) { err.textContent = ex.message; go.disabled = false; go.textContent = 'Yes, remove'; }
+    } },
+    h('p', { class: 'confirm-text' }, `Their login (@${k.username}) will stop working and be deleted. This cannot be undone.`),
+    to && field(`Move their ${mine.length} worker${mine.length === 1 ? '' : 's'} to`, to),
+    err, h('div', { class: 'actions' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => m.close() }, 'Cancel'), go)));
   };
 
   const addContractor = (code) => {
@@ -51,7 +68,8 @@ export function contractorsView(ctx, colorOf) {
     ctx.contractors.filter((k) => k.city_code === c.code).map((k) => {
       const n = ctx.workers.filter((w) => w.contractor_id === k.id).length;
       return h('div', { class: 'proj-row' }, h('span', {}, k.full_name), h('small', {}, `@${k.username} · ${n} workers`),
-        h('button', { class: 'btn ghost sm', onclick: () => rename(k) }, 'Rename'));
+        h('button', { class: 'btn ghost sm', onclick: () => rename(k) }, 'Rename'),
+        h('button', { class: 'icon-btn', title: `Remove ${k.full_name}`, 'aria-label': `Remove ${k.full_name}`, onclick: () => removeContractor(k) }, icon('x')));
     }));
 
   return h('div', { class: 'team-page' },

@@ -1,10 +1,10 @@
-import { api, isDemo, resetDemo, setDemo } from './api.js?v=11';
-import { Graph } from './graph.js?v=11';
-import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=11';
-import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=11';
-import { workerBrowser } from './workertable.js?v=11';
-import { projectsView } from './projects.js?v=11';
-import { contractorsView } from './contractors.js?v=11';
+import { api, isDemo, resetDemo, setDemo } from './api.js?v=12';
+import { Graph } from './graph.js?v=12';
+import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=12';
+import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=12';
+import { workerBrowser } from './workertable.js?v=12';
+import { projectsView } from './projects.js?v=12';
+import { contractorsView } from './contractors.js?v=12';
 
 const COLORS = ['#9d8cff', '#4fb3d9', '#e0607e', '#b4c94a', '#d08ad6', '#7d8fa9'];
 const ACCENT = '#f07a35';

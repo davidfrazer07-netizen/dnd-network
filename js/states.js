@@ -1,5 +1,5 @@
-import { api } from './api.js?v=11';
-import { h, toast, openModal, confirmBox } from './ui.js?v=11';
+import { api } from './api.js?v=12';
+import { h, toast, openModal, confirmBox } from './ui.js?v=12';
 
 const field = (label, el) => h('label', { class: 'field' }, h('span', {}, label), el);
 

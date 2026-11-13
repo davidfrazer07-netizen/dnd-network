@@ -1,4 +1,4 @@
-// Supabase Edge Function: lets an admin (Dhanush / Derain) create a contractor login.
+// Supabase Edge Function: lets an admin (Dhanush / Derain) create or remove a contractor login.
 // Creating logins needs the service key, which must never reach the browser, so it runs here.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 
@@ -20,9 +20,20 @@ Deno.serve(async (req) => {
     const { data: u, error: ue } = await admin.auth.getUser(token);
     if (ue || !u.user) return json({ error: 'Please log in again' }, 401);
     const { data: me } = await admin.from('profiles').select('role').eq('id', u.user.id).single();
-    if (me?.role !== 'admin') return json({ error: 'Only the admins can add contractors' }, 403);
+    if (me?.role !== 'admin') return json({ error: 'Only the admins can manage contractors' }, 403);
 
     const b = await req.json();
+
+    if (b.action === 'remove') { // delete a contractor's login (their profile goes with it)
+      const id = String(b.id || '');
+      const { data: t } = await admin.from('profiles').select('role').eq('id', id).maybeSingle();
+      if (!t || t.role !== 'contractor') return json({ error: 'Contractor not found' }, 404);
+      const { count } = await admin.from('workers').select('id', { count: 'exact', head: true }).eq('contractor_id', id);
+      if (count) return json({ error: `They still have ${count} worker${count === 1 ? '' : 's'}. Move them first.` }, 400);
+      const { error: de } = await admin.auth.admin.deleteUser(id);
+      if (de) return json({ error: de.message }, 400);
+      return json({ ok: true });
+    }
     const username = String(b.username || '').trim().toLowerCase();
     const full_name = String(b.full_name || '').trim();
     const password = String(b.password || '');

@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=11';
+import { CONFIG } from './config.js?v=12';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -80,15 +80,23 @@ const live = {
     fail(error);
     if (!data.length) throw new Error('Not allowed. Run supabase/migration_004.sql first.');
   },
-  async addContractor(d) { // runs in the manage-contractor Edge Function (needs the service key)
-    const { data, error } = await sb.functions.invoke('manage-contractor', { body: d });
+  async callContractorFn(body) { // runs in the manage-contractor Edge Function (needs the service key)
+    const { data, error } = await sb.functions.invoke('manage-contractor', { body });
     if (error) {
       let msg = error.message;
       try { const j = await error.context.json(); msg = j.error || j.message || msg; } catch { /* keep default */ }
-      if (/not found/i.test(msg)) msg = 'The contractor service is not set up yet. Deploy the manage-contractor function in Supabase.';
+      if (/not found/i.test(msg) && !/contractor not found/i.test(msg)) msg = 'The contractor service is not set up yet. Deploy the manage-contractor function in Supabase.';
       throw new Error(msg);
     }
     if (data?.error) throw new Error(data.error);
+  },
+  addContractor(d) { return this.callContractorFn(d); },
+  async removeContractor(id, moveTo) { // their workers move first, then the login goes
+    if (moveTo) {
+      const { error } = await sb.from('workers').update({ contractor_id: moveTo }).eq('contractor_id', id);
+      fail(error);
+    }
+    await this.callContractorFn({ action: 'remove', id });
   },
   async history(workerId) {
     const { data, error } = await sb.from('worker_history').select('*').eq('worker_id', workerId).order('started_at');
@@ -264,6 +272,12 @@ const demo = {
   async removeState(code) {
     adminOnly();
     db.cities.find((c) => c.code === code).active = false; save();
+  },
+  async removeContractor(id, moveTo) {
+    adminOnly();
+    if (moveTo) db.workers.forEach((w) => { if (w.contractor_id === id) w.contractor_id = moveTo; });
+    else if (db.workers.some((w) => w.contractor_id === id)) throw new Error('They still have workers. Move them first.');
+    db.people = db.people.filter((p) => p.id !== id); save();
   },
   async addContractor({ username, full_name, city_code }) {
     adminOnly();
