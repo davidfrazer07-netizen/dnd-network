@@ -1,6 +1,6 @@
-import { api } from './api.js?v=13';
-import { h, icon, toast, openModal, confirmBox } from './ui.js?v=13';
-import { addStateModal, removeStateModal } from './states.js?v=13';
+import { api } from './api.js?v=14';
+import { h, icon, toast, openModal, confirmBox } from './ui.js?v=14';
+import { addStateModal, removeStateModal } from './states.js?v=14';
 
 // Admin-only page: the project list for each state. Contractors can only pick from these.
 export function projectsView(ctx, colorOf) {

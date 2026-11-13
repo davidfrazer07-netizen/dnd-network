@@ -1,5 +1,5 @@
-import { h, icon, fullName } from './ui.js?v=13';
-import { STATUS, pill, deployed, openWorkerForm, openWorkerModal } from './forms.js?v=13';
+import { h, icon, fullName } from './ui.js?v=14';
+import { STATUS, pill, deployed, openWorkerForm, openWorkerModal } from './forms.js?v=14';
 
 // Filterable workers table. `F` is the filter state (q, status, con, where, proj) and survives re-renders.
 // `scope` pins the table to one home state (the state page); `rerender` redraws the page.
@@ -22,7 +22,7 @@ export function workerBrowser(ctx, F, { scope = null, rerender, onFiltered = () 
     return true;
   };
 
-  const head = ['ID', 'Name', 'Contractor', 'Deployed', ...(scope ? [] : ['Home']), 'Skill', 'Task', 'Status'];
+  const head = ['ID', 'Name', 'Contractor', 'Deployed', 'Home', 'Skill', 'Task', 'Status'];
   const tbody = h('tbody');
   const count = h('span', { class: 'muted' });
   const base = ctx.workers.filter((w) => !scope || w.city_code === scope);
@@ -34,7 +34,7 @@ export function workerBrowser(ctx, F, { scope = null, rerender, onFiltered = () 
         h('td', {}, h('code', {}, w.worker_code)), h('td', {}, h('strong', {}, fullName(w))),
         h('td', {}, ctx.contractors.find((k) => k.id === w.contractor_id)?.full_name || ''),
         h('td', { class: 'dep' }, d.state ? [h('span', {}, d.state), d.project && h('small', {}, d.project)] : '—'),
-        !scope && h('td', {}, w.city_code), h('td', {}, w.skill),
+        h('td', {}, w.city_code), h('td', {}, w.skill),
         h('td', { class: 'task' }, w.current_task || '—'), h('td', {}, pill(w.status)));
     }) : [h('tr', {}, h('td', { colspan: head.length, class: 'muted center' }, 'No workers match.'))]));
     count.textContent = `${ws.length} of ${base.length}`;
