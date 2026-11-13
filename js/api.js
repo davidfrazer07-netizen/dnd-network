@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=9';
+import { CONFIG } from './config.js?v=10';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -26,7 +26,10 @@ const live = {
   async login(username, password) {
     const email = `${username.trim().toLowerCase()}@${EMAIL_DOMAIN}`;
     const { data, error } = await sb.auth.signInWithPassword({ email, password });
-    if (error) throw new Error('Wrong username or password');
+    if (error) {
+      console.warn('login failed:', error.message);
+      throw new Error(/invalid login credentials/i.test(error.message) ? 'Wrong username or password' : `Could not log in: ${error.message}`);
+    }
     return this.profile(data.user.id);
   },
   async logout() { await sb.auth.signOut(); },

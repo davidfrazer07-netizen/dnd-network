@@ -1,5 +1,5 @@
-import { api } from './api.js?v=9';
-import { h, icon, select, toast, openModal } from './ui.js?v=9';
+import { api } from './api.js?v=10';
+import { h, icon, select, toast, openModal } from './ui.js?v=10';
 
 // Admin-only page: add states, add contractors, rename contractors.
 export function contractorsView(ctx, colorOf) {
