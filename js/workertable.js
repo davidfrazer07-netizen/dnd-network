@@ -1,9 +1,9 @@
-import { h, icon, fullName } from './ui.js?v=7';
-import { STATUS, pill, deployed, openWorkerForm, openWorkerModal } from './forms.js?v=7';
+import { h, icon, fullName } from './ui.js?v=8';
+import { STATUS, pill, deployed, openWorkerForm, openWorkerModal } from './forms.js?v=8';
 
 // Filterable workers table. `F` is the filter state (q, status, con, where, proj) and survives re-renders.
 // `scope` pins the table to one home state (the state page); `rerender` redraws the page.
-export function workerBrowser(ctx, F, { scope = null, rerender }) {
+export function workerBrowser(ctx, F, { scope = null, rerender, onFiltered = () => {} }) {
   const cons = ctx.contractors.filter((k) => !scope || k.city_code === scope);
   const projs = ctx.projects.filter((p) => !F.where || p.city_code === F.where);
   const dd = (opts, value, on) => h('select', { onchange: (e) => { on(e.target.value); rerender(); } },
@@ -38,13 +38,14 @@ export function workerBrowser(ctx, F, { scope = null, rerender }) {
         h('td', { class: 'task' }, w.current_task || '—'), h('td', {}, pill(w.status)));
     }) : [h('tr', {}, h('td', { colspan: head.length, class: 'muted center' }, 'No workers match.'))]));
     count.textContent = `${ws.length} of ${base.length}`;
+    onFiltered(ws);
   };
   fill();
 
   const toolbar = h('div', { class: 'toolbar' },
     h('input', { class: 'search', placeholder: 'Search', value: F.q || '', oninput: (e) => { F.q = e.target.value; fill(); } }),
     dd([['', 'All contractors'], ...cons.map((k) => [k.id, scope ? k.full_name : `${k.city_code} · ${k.full_name}`])], F.con, (v) => { F.con = v; }),
-    dd([['', 'Working in: any state'], ...ctx.cities.map((c) => [c.code, c.name])], F.where, (v) => {
+    dd([['', 'Deployed: any state'], ...ctx.cities.map((c) => [c.code, c.name])], F.where, (v) => {
       F.where = v;
       if (F.proj && !ctx.projects.some((p) => p.id === F.proj && (!v || p.city_code === v))) F.proj = '';
     }),

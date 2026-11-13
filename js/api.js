@@ -1,4 +1,4 @@
-import { CONFIG } from './config.js?v=7';
+import { CONFIG } from './config.js?v=8';
 
 const EMAIL_DOMAIN = 'dndnetwork.app'; // must match scripts/seed-users.mjs
 const SB_CDN = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/+esm';
@@ -68,6 +68,16 @@ const live = {
     fail(error);
     await this.removeFiles(files);
   },
+  async history(workerId) {
+    const { data, error } = await sb.from('worker_history').select('*').eq('worker_id', workerId).order('started_at');
+    fail(error);
+    return data;
+  },
+  async renameContractor(id, name) {
+    const { data, error } = await sb.from('profiles').update({ full_name: name }).eq('id', id).select();
+    fail(error);
+    if (!data.length) throw new Error('Not allowed. Run supabase/migration_003.sql first.');
+  },
   async projects() {
     const { data, error } = await sb.from('projects').select('*').order('city_code').order('name');
     fail(error);
@@ -104,7 +114,7 @@ const live = {
 };
 
 /* ------------------------- Demo (no backend) -------------------------- */
-const KEY = 'dnd_demo_v2';
+const KEY = 'dnd_demo_v3';
 const CITY_LIST = [['OD', 'Odisha'], ['TN', 'Tamil Nadu'], ['KA', 'Karnataka']];
 const PROJECT_NAMES = {
   OD: ['Bhubaneswar Smart Road', 'Paradip Warehouse'],
@@ -135,7 +145,9 @@ function seedDemo() {
     { id: 'a-derain', username: 'derain', full_name: 'Derain', role: 'admin' },
   ];
   const workers = [];
+  const history = [];
   const counters = {};
+  const DAY = 86400000;
   const projects = cities.flatMap((c) => PROJECT_NAMES[c.code].map((name, i) => ({
     id: `p-${c.code}-${i + 1}`, city_code: c.code, name, created_at: new Date().toISOString() })));
   for (const c of cities) {
@@ -167,10 +179,23 @@ function seedDemo() {
           status: roll < 0.12 ? 'Available' : roll < 0.2 ? 'On leave' : 'Working',
           created_at: new Date().toISOString(),
         });
+        // history: 0-2 earlier stretches, then the current one
+        const w = workers[workers.length - 1];
+        let start = Date.now() - (10 + Math.floor(r() * 290)) * DAY;
+        history.push({ id: crypto.randomUUID(), worker_id: w.id, state_code: w.current_city, project_id: w.project_id,
+          project_name: projects.find((p) => p.id === w.project_id)?.name || null, started_at: new Date(start).toISOString(), ended_at: null });
+        for (let k = Math.floor(r() * 3); k > 0; k--) {
+          const end = start, len = (20 + Math.floor(r() * 100)) * DAY;
+          const pr = pick(projects.filter((p) => p.city_code === c.code));
+          start = end - len;
+          history.push({ id: crypto.randomUUID(), worker_id: w.id, state_code: c.code, project_id: pr.id, project_name: pr.name,
+            started_at: new Date(start).toISOString(), ended_at: new Date(end).toISOString() });
+        }
+        w.created_at = new Date(start).toISOString();
       }
     }
   }
-  return { cities, people, workers, projects, counters, session: null };
+  return { cities, people, workers, projects, history, counters, session: null };
 }
 
 let db;
@@ -178,6 +203,12 @@ const save = () => localStorage.setItem(KEY, JSON.stringify(db));
 const wait = (v) => new Promise((res) => setTimeout(() => res(structuredClone(v)), 120));
 const me = () => db.people.find((p) => p.id === db.session);
 const canSee = (w) => me().role === 'admin' || w.city_code === me().city_code;
+const openStretch = (w) => { // close the running stretch and start a new one, like the database trigger
+  const now = new Date().toISOString();
+  db.history.forEach((x) => { if (x.worker_id === w.id && !x.ended_at) x.ended_at = now; });
+  db.history.push({ id: crypto.randomUUID(), worker_id: w.id, state_code: w.current_city, project_id: w.project_id || null,
+    project_name: db.projects.find((p) => p.id === w.project_id)?.name || null, started_at: now, ended_at: null });
+};
 const adminOnly = () => { if (me().role !== 'admin') throw new Error('Only the admins can change projects'); };
 const checkProject = (id) => { // contractors may only pick a project from their own state
   if (!id || me().role === 'admin') return;
@@ -201,6 +232,13 @@ const demo = {
   cities: async () => wait(db.cities),
   people: async () => wait(db.people.filter((p) => me().role === 'admin' || p.city_code === me().city_code || p.id === me().id)),
   workers: async () => wait(db.workers.filter(canSee)),
+  async history(workerId) {
+    return wait(db.history.filter((x) => x.worker_id === workerId).sort((a, b) => a.started_at.localeCompare(b.started_at)));
+  },
+  async renameContractor(id, name) {
+    adminOnly();
+    db.people.find((p) => p.id === id).full_name = name; save();
+  },
   async projects() {
     return wait(db.projects.filter((p) => me().role === 'admin' || p.city_code === me().city_code));
   },
@@ -213,7 +251,9 @@ const demo = {
   },
   async renameProject(id, name) {
     adminOnly();
-    db.projects.find((p) => p.id === id).name = name; save();
+    const p = db.projects.find((x) => x.id === id); p.name = name;
+    db.history.forEach((x) => { if (x.project_id === id) x.project_name = name; });
+    save();
   },
   async removeProject(id) {
     adminOnly();
@@ -235,7 +275,8 @@ const demo = {
     db.counters[w.city_code] = (db.counters[w.city_code] || 0) + 1;
     const row = { ...w, id: crypto.randomUUID(), created_at: new Date().toISOString(),
       worker_code: `DND_${w.city_code}_${String(db.counters[w.city_code]).padStart(3, '0')}` };
-    db.workers.push(row); save();
+    db.workers.push(row);
+    openStretch(row); save();
     return wait(row);
   },
   async updateWorker(id, patch) {
@@ -243,13 +284,17 @@ const demo = {
     if (!w || !canSee(w)) throw new Error('Not allowed');
     const { worker_code, city_code, ...safe } = patch;
     if (safe.project_id !== undefined && safe.project_id !== w.project_id) checkProject(safe.project_id);
-    Object.assign(w, safe); save();
+    const moved = (safe.current_city !== undefined && safe.current_city !== w.current_city) || (safe.project_id !== undefined && safe.project_id !== w.project_id);
+    Object.assign(w, safe);
+    if (moved) openStretch(w);
+    save();
     return wait(w);
   },
   async removeWorker(id) {
     const w = db.workers.find((x) => x.id === id);
     if (!w || !canSee(w)) throw new Error('Not allowed');
-    db.workers = db.workers.filter((x) => x.id !== id); save();
+    db.workers = db.workers.filter((x) => x.id !== id);
+    db.history = db.history.filter((x) => x.worker_id !== id); save();
   },
   reset() { localStorage.removeItem(KEY); },
 };

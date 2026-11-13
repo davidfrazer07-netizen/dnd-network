@@ -111,6 +111,14 @@ export function shrinkImage(file, max = 1600, quality = 0.8) {
 
 export const openImage = (title, src) => openModal(title, h('img', { class: 'lightbox', src, alt: title }), { wide: true });
 
+// "3 months 12 days" style length between two dates (end defaults to now)
+export function fmtSpan(from, to) {
+  const days = Math.max(0, Math.floor((new Date(to || Date.now()) - new Date(from)) / 86400000));
+  if (days < 1) return 'less than a day';
+  const m = Math.floor(days / 30), d = days % 30, pl = (n, w) => `${n} ${w}${n === 1 ? '' : 's'}`;
+  return m ? [pl(m, 'month'), d && pl(d, 'day')].filter(Boolean).join(' ') : pl(days, 'day');
+}
+
 export const fmtAadhaar = (s) => (s ? String(s).replace(/(\d{4})(?=\d)/g, '$1 ') : '');
 
 export const fullName =(w) => `${w.first_name} ${w.last_name}`.trim();

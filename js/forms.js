@@ -1,5 +1,5 @@
-import { api, isDemo } from './api.js?v=7';
-import { h, select, toast, openModal, confirmBox, openImage, shrinkImage, ageOf, fullName, fmtDate, fmtAadhaar } from './ui.js?v=7';
+import { api, isDemo } from './api.js?v=8';
+import { h, select, toast, openModal, confirmBox, openImage, shrinkImage, ageOf, fullName, fmtDate, fmtAadhaar, fmtSpan } from './ui.js?v=8';
 
 export const STATUS = {
   Working: { color: '#5bbf8a', hint: 'On a job' },
@@ -102,7 +102,7 @@ export function openWorkerForm(ctx, worker) {
     h('div', { class: 'span2 divider' }, 'Aadhaar card photos'),
     docs.front.el, docs.back.el,
     h('div', { class: 'span2 divider' }, 'Current work'),
-    field('Working in', f.current_city), field('Status', f.status),
+    field('Deployed in', f.current_city), field('Status', f.status),
     field('Project', f.project_id), field('Task', f.current_task),
     err,
     h('div', { class: 'actions span2' }, save));
@@ -174,7 +174,7 @@ export function openStatusForm(ctx, worker) {
   const m = openModal(`${fullName(worker)} · ${worker.worker_code}`, h('div', { class: 'status-form' },
     h('datalist', { id: 'tasks2' }, TASKS.map((s) => h('option', { value: s }))),
     h('div', { class: 'status-row' }, btns),
-    field('Working in which state?', city),
+    field('Deployed in which state?', city),
     field('Project', project),
     field('What task are they doing?', task),
     err, h('div', { class: 'actions' }, save)));
@@ -189,6 +189,21 @@ function docThumb(label, path) {
   api.fileUrl(path).then((u) => { url = u; img.src = u; })
     .catch(() => btn.replaceChildren(h('span', { class: 'doc-hint' }, 'Could not load')));
   return h('div', { class: 'kv' }, h('span', {}, label), btn);
+}
+
+// deployment history: every state/project stretch with how long it lasted
+function historyBlock(ctx, w) {
+  const box = h('div', { class: 'history' }, h('h4', {}, 'History'), h('p', { class: 'muted' }, 'Loading…'));
+  api.history(w.id).then((rows) => {
+    const start = rows[0]?.started_at || w.created_at;
+    box.replaceChildren(h('h4', {}, 'History'),
+      h('p', { class: 'hist-start' }, `Started on ${fmtDate(start)} · ${fmtSpan(start)} with DND`),
+      h('div', { class: 'hist-list' }, [...rows].reverse().map((x) => h('div', { class: `hist-row ${x.ended_at ? '' : 'now'}` },
+        h('strong', {}, x.project_name || 'No project'),
+        h('span', {}, ctx.cities.find((c) => c.code === x.state_code)?.name || x.state_code || '—'),
+        h('small', {}, `${fmtDate(x.started_at)} to ${x.ended_at ? fmtDate(x.ended_at) : 'now'} · ${fmtSpan(x.started_at, x.ended_at)}`)))));
+  }).catch(() => box.replaceChildren(h('h4', {}, 'History'), h('p', { class: 'muted' }, 'History is not available yet.')));
+  return box;
 }
 
 export function workerDetail(ctx, w, close = () => {}) {
@@ -211,6 +226,7 @@ export function workerDetail(ctx, w, close = () => {}) {
       row('Aadhaar Card Number', fmtAadhaar(w.aadhaar_number), 'full'),
       row('Address', w.address, 'full'),
       docThumb('Aadhaar front', w.aadhaar_front), docThumb('Aadhaar back', w.aadhaar_back)),
+    historyBlock(ctx, w),
     h('div', { class: 'actions' },
       h('button', { class: 'btn primary', onclick: () => { close(); openStatusForm(ctx, w); } }, 'Update status'),
       h('button', { class: 'btn ghost', onclick: () => { close(); openWorkerForm(ctx, w); } }, 'Edit details'),

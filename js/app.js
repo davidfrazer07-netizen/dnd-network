@@ -1,9 +1,10 @@
-import { api, isDemo, resetDemo, setDemo } from './api.js?v=7';
-import { Graph } from './graph.js?v=7';
-import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=7';
-import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=7';
-import { workerBrowser } from './workertable.js?v=7';
-import { projectsView } from './projects.js?v=7';
+import { api, isDemo, resetDemo, setDemo } from './api.js?v=8';
+import { Graph } from './graph.js?v=8';
+import { h, toast, openModal, fullName, icon, mark } from './ui.js?v=8';
+import { STATUS, openWorkerForm, openStatusForm, openWorkerModal, workerDetail, removeWorker, pill, deployed } from './forms.js?v=8';
+import { workerBrowser } from './workertable.js?v=8';
+import { projectsView } from './projects.js?v=8';
+import { contractorsView } from './contractors.js?v=8';
 
 const COLORS = ['#9d8cff', '#4fb3d9', '#e0607e', '#b4c94a', '#d08ad6', '#7d8fa9'];
 const ACCENT = '#f07a35';
@@ -108,7 +109,7 @@ function renderShell() {
 }
 
 function renderTop() {
-  const tabs = isAdmin() ? [['network', 'Network'], ['list', 'All workers'], ['projects', 'Projects']] : [['team', 'My team'], ['network', 'Network']];
+  const tabs = isAdmin() ? [['network', 'Network'], ['list', 'All workers'], ['projects', 'Projects'], ['contractors', 'Contractors']] : [['team', 'My team'], ['network', 'Network']];
   const c = cityOf(ctx.user.city_code);
   document.getElementById('top').replaceChildren(
     h('div', { class: 'brand' }, h('span', { class: 'logo sm' }, mark(18)), h('strong', {}, 'DND Network'), isDemo && h('span', { class: 'demo-tag' }, 'DEMO')),
@@ -124,6 +125,7 @@ function render() {
   const main = document.getElementById('main');
   if (S.tab === 'list') main.replaceChildren(renderList());
   else if (S.tab === 'state') main.replaceChildren(renderState());
+  else if (S.tab === 'contractors') main.replaceChildren(contractorsView(ctx, cityColor));
   else if (S.tab === 'projects') main.replaceChildren(projectsView(ctx, cityColor));
   else if (S.tab === 'team') main.replaceChildren(renderTeam());
   else main.replaceChildren(renderNetwork());
@@ -225,7 +227,7 @@ function renderNetwork() {
     h('h4', {}, 'Legend'),
     legendDot(ACCENT, 'Admin'), legendDot('#9d8cff', 'State and contractor'),
     legendDot('#5bbf8a', 'Worker, coloured by status'),
-    h('div', { class: 'leg' }, h('i', { class: 'ring' }), 'Working in another state'),
+    h('div', { class: 'leg' }, h('i', { class: 'ring' }), 'Deployed in another state'),
     h('p', { class: 'tip' }, 'Drag to move, scroll to zoom'));
 
   drawerEl = admin ? h('aside', { class: 'drawer' }) : null;
@@ -283,7 +285,15 @@ function renderDrawer() {
 
 /* ----------------------------- admin: all workers ----------------------------- */
 function renderList() {
-  return h('div', { class: 'list-page' }, statsBar(ctx.workers), ...workerBrowser(ctx, S.lf, { rerender: render }));
+  const st = liveStats(ctx.workers);
+  const [toolbar, table] = workerBrowser(ctx, S.lf, { rerender: render, onFiltered: st.update });
+  return h('div', { class: 'list-page' }, st.el(), toolbar, table);
+}
+
+// stats strip that follows the table filters
+function liveStats(base) {
+  let el = statsBar(base);
+  return { el: () => el, update: (ws) => { const next = statsBar(ws); el.replaceWith(next); el = next; } };
 }
 
 /* ------------------------------ admin: one state ------------------------------ */
@@ -294,6 +304,8 @@ function renderState() {
   const ws = ctx.workers.filter((w) => w.city_code === c.code);
   const cons = ctx.contractors.filter((k) => k.city_code === c.code);
   const projs = ctx.projects.filter((p) => p.city_code === c.code);
+  const st = liveStats(ws);
+  const [toolbar, table] = workerBrowser(ctx, S.sf, { scope: c.code, rerender: render, onFiltered: st.update });
   const conCard = (k) => {
     const mine = ws.filter((w) => w.contractor_id === k.id);
     const n = counts(mine);
@@ -306,11 +318,11 @@ function renderState() {
       h('div', {}, h('button', { class: 'btn ghost sm back', onclick: () => { S.tab = 'network'; render(); } }, icon('back', 14), 'Network'),
         h('h1', {}, c.name),
         h('p', { class: 'muted' }, `${cons.length} contractors · ${projs.length} project${projs.length === 1 ? '' : 's'}${projs.length ? `: ${projs.map((p) => p.name).join(', ')}` : ''}`))),
-    statsBar(ws),
+    st.el(),
     h('h4', { class: 'section-h' }, 'Contractors'),
     h('div', { class: 'con-cards' }, cons.map(conCard)),
     h('h4', { class: 'section-h' }, 'Workers'),
-    ...workerBrowser(ctx, S.sf, { scope: c.code, rerender: render }));
+    toolbar, table);
 }
 
 /* --------------------------- contractor: my team --------------------------- */
